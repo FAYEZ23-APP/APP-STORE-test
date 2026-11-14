@@ -1,0 +1,60 @@
+using Marketplace.Application.DTOs.Delivery;
+using Marketplace.Application.Interfaces;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Marketplace.API.Controllers;
+
+[ApiController]
+[Route("api/delivery")]
+public class DeliveryController : ControllerBase
+{
+    private readonly IDeliveryProvider _deliveryProvider;
+    private readonly IShipmentService _shipmentService;
+
+    public DeliveryController(IDeliveryProvider deliveryProvider, IShipmentService shipmentService)
+    {
+        _deliveryProvider = deliveryProvider;
+        _shipmentService = shipmentService;
+    }
+
+    /// <summary>Search supported Egyptian delivery cities and governorates across all 27 governorates.</summary>
+    [HttpGet("cities")]
+    [ProducesResponseType(typeof(IReadOnlyList<DeliveryCityDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<DeliveryCityDto>>> GetCities([FromQuery] string? query = null)
+    {
+        var cities = await _deliveryProvider.GetCitiesAsync(query);
+        return Ok(cities);
+    }
+
+    /// <summary>List pickup points for a given city.</summary>
+    [HttpGet("pickup-points")]
+    [ProducesResponseType(typeof(IReadOnlyList<PickupPointDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<PickupPointDto>>> GetPickupPoints([FromQuery] string? city = null)
+    {
+        var points = await _deliveryProvider.GetPickupPointsAsync(city);
+        return Ok(points);
+    }
+
+    /// <summary>List PUDO pickup hubs and smart lockers across Egyptian regions with optional distance calculation.</summary>
+    [HttpGet("pudo-points")]
+    [ProducesResponseType(typeof(IReadOnlyList<PudoPointDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<PudoPointDto>>> GetPudoPoints(
+        [FromQuery] string? city = null,
+        [FromQuery] double? lat = null,
+        [FromQuery] double? lng = null)
+    {
+        var points = await _deliveryProvider.GetPudoPointsAsync(city, lat, lng);
+        return Ok(points);
+    }
+
+    /// <summary>Calculate per-seller parcel delivery quotes (cost and ETA) for a set of items and destination.</summary>
+    [HttpPost("quote")]
+    [ProducesResponseType(typeof(DeliveryQuoteResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<DeliveryQuoteResponse>> GetQuote(DeliveryQuoteRequest request)
+    {
+        var quote = await _shipmentService.CalculateQuoteAsync(request);
+        return Ok(quote);
+    }
+}
