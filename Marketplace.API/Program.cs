@@ -492,17 +492,11 @@ using (var scope = app.Services.CreateScope())
                     "The schema must come only from EF Core migrations (never EnsureCreated).");
             }
 
-            // 2. Database:AutoMigrate (default false) for test deployments only; must also refuse when history table is missing
+            // 2. Database:AutoMigrate or brand-new empty database (existingUserTables == 0)
             var autoMigrate = app.Configuration.GetValue<bool>("Database:AutoMigrate", false);
-            if (autoMigrate)
+            if (autoMigrate || existingUserTables == 0)
             {
-                if (!hasHistoryTable)
-                {
-                    throw new InvalidOperationException(
-                        "Startup refused: Database:AutoMigrate is enabled, but the '__EFMigrationsHistory' table is missing.");
-                }
-
-                logger.LogWarning("Database:AutoMigrate is enabled (for test deployments only). Applying EF Core PostgreSQL migrations on startup...");
+                logger.LogWarning("Applying EF Core PostgreSQL migrations on startup (autoMigrate={AutoMigrate}, existingUserTables={ExistingUserTables})...", autoMigrate, existingUserTables);
                 await db.Database.MigrateAsync();
                 logger.LogInformation("Database migrations applied successfully.");
             }
